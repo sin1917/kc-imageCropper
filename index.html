@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="sin1917">
+    <title>kc-imgCripper</title>
+    <script src="https://docs.opencv.org/4.5.5/opencv.js"></script>
+</head>
+<script>
+    var imageObj;
+
+    document.onpaste = function (pasteEvent) {
+        crearInputArea();
+        const item = pasteEvent.clipboardData.items[0];
+
+        if (item.type.indexOf("image") === 0) {
+            const blob = item.getAsFile();
+
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                const imageURL = event.target.result;
+
+                //画像をcvMatへ
+                const image = new Image();
+                image.onload = () => {
+                    imageObj = image;
+                }
+                image.src = imageURL;
+                //確認表示UI
+                document.getElementById("inputDisplay").src = imageURL;
+                document.getElementById("paramSet").style.display = "";
+            };
+
+            reader.readAsDataURL(blob);
+        }
+        else {
+            document.getElementById("message").textContent = "未対応の形式または画像でないデータの貼り付け";
+        }
+    }
+
+    const onClickCropp = () => {
+        //clipWidth = 1200;
+        //clipHeight = 720;
+        const clipWidth = document.getElementById('inputWidth').value;
+        const clipHeight = document.getElementById('inputHeight').value;
+        const margin = 5;
+
+        const mask = cv.imread(imageObj);
+        cv.cvtColor(mask, mask, cv.COLOR_RGBA2GRAY, 0);
+        cv.threshold(mask, mask, 250, 255, cv.THRESH_BINARY);
+        let contours = new cv.MatVector();
+        let hierarchy = new cv.Mat();
+        cv.findContours(mask, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
+
+        croppRects = [];
+        for (let i = 0; i < contours.size(); i++) {
+            const cnt = contours.get(i);
+            const rect = cv.boundingRect(cnt);
+            if (Math.abs(clipWidth - rect.width) > margin ||
+                Math.abs(clipHeight - rect.height > margin)) {
+                cnt.delete();
+                continue;
+            }
+            let croppRect = new cv.Rect(rect.x + 1, rect.y + 1, rect.width - 2, rect.height - 2);
+            croppRects.push(croppRect);
+
+            //let cropped = mat.roi(croppRect);
+            //imgElement = matToImgelEment(cropped);
+            //document.getElementById("outputArea").appendChild(imgElement);
+            //cnt.delete(); cropped.delete();
+            cnt.delete();
+        }
+        mask.delete(); contours.delete(); hierarchy.delete();
+
+        const outputArea = document.getElementById("outputArea");
+        if (croppRects.length > 0) {
+            const mat = cv.imread(imageObj);
+            for (let i = 0; i < croppRects.length; i++) {
+                let rect = croppRects[i];
+                croppMat = mat.roi(rect);
+                outputArea.appendChild(matToImgelEment(croppMat));
+            }
+            mat.delete();
+        }
+        else {
+            document.getElementById("message").textContent = "切り取り対象領域が見つかりませんでした";
+        }
+    }
+
+
+    function matToImgelEment(imgMat) {
+        //blobのための一時canvas領域
+        let canvas = document.createElement("canvas");
+        canvas.id = "tmp";
+        canvas.style.display = "none";
+        document.getElementById("outputArea").appendChild(canvas);
+        cv.imshow(canvas.id, imgMat);
+
+        let imgElement = document.createElement("img");
+        canvas.toBlob(
+            function (blob) {
+                let url = URL.createObjectURL(blob);
+                imgElement.onload = () => {
+                    URL.revokeObjectURL(url);
+                }
+                imgElement.src = url;
+            },
+            'image/png'
+        );
+        document.getElementById(canvas.id).remove();
+
+        return imgElement;
+    }
+
+    function crearInputArea() {
+        imageObj = ""
+        document.getElementById("inputDisplay").src = "";
+        document.getElementById("message").textContent = "";
+        document.getElementById("paramSet").style.display = "none";
+    }
+</script>
+<style>
+    body {
+        background-color: gray;
+    }
+
+    #inputDisplay {
+        max-width: 60%;
+    }
+
+    #paramSet input {
+        width: 50px;
+
+    }
+
+    #outputArea img {
+        max-width: 90%;
+    }
+</style>
+
+<body>
+    <div>
+        <p>Paste your image here..</p>
+        <div id="inputArea">
+            <img id="inputDisplay" />
+            <div id="paramSet" style="display: none;">
+                <label for="inputWidth">width:</label> <input type="number" id="inputWidth" name="numberInput" min="0"
+                    step="1" value="1200">px 　　
+                <label for="inputHeight">height:</label> <input type="number" id="inputHeight" name="numberInput"
+                    min="0" step="1" value="720">px 　　
+                <button onclick="onClickCropp()" id="btn">clopp</button>
+            </div>
+        </div>
+        <p id="message"></p>
+        <div id="outputArea"> <!-- 出力先 --> </div>
+    </div>
+</body>
+
+</html>
