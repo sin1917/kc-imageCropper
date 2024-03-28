@@ -65,11 +65,6 @@
             }
             let croppRect = new cv.Rect(rect.x + 1, rect.y + 1, rect.width - 2, rect.height - 2);
             croppRects.push(croppRect);
-
-            //let cropped = mat.roi(croppRect);
-            //imgElement = matToImgelEment(cropped);
-            //document.getElementById("outputArea").appendChild(imgElement);
-            //cnt.delete(); cropped.delete();
             cnt.delete();
         }
         mask.delete(); contours.delete(); hierarchy.delete();
@@ -103,7 +98,7 @@
             function (blob) {
                 let url = URL.createObjectURL(blob);
                 imgElement.onload = () => {
-                    URL.revokeObjectURL(url);
+                    //URL.revokeObjectURL(url);
                 }
                 imgElement.src = url;
             },
@@ -123,7 +118,7 @@
 </script>
 <style>
     body {
-        background-color: gray;
+        background-color: lightslategray;
     }
 
     #inputDisplay {
@@ -135,8 +130,14 @@
 
     }
 
+    #outputArea{
+        display: flex;
+        flex-direction: column-reverse;
+    }
+
     #outputArea img {
         max-width: 90%;
+        padding: 0.5em;
     }
 </style>
 
@@ -150,7 +151,7 @@
                     step="1" value="1200">px 　　
                 <label for="inputHeight">height:</label> <input type="number" id="inputHeight" name="numberInput"
                     min="0" step="1" value="720">px 　　
-                <button onclick="onClickCropp()" id="btn">clopp</button>
+                <button onclick="onClickCropp()" id="btn">実行</button>
             </div>
         </div>
         <p id="message"></p>
